@@ -251,7 +251,7 @@ void BrewManager::update() {
     sManager->disconnectScale();
   }
 
-  if (machine.isTwoCupStart()) {
+  if (machine.isOneCupStart()) {
     wake();
     return;
   }
@@ -271,7 +271,7 @@ void BrewManager::handleIdleState() {
     if (machine.isMacroComplete()) {
       waitingForMacro = false;
       // macro only runs when weight triggered preinfusion is enabled and user
-      // triggers a brew using the one cup button which doesn't support
+      // triggers a brew using the two cup button which doesn't support
       // arbitrary length preinfusion on hold so we can take the regular/decaf
       // preset and half it to get the target
       float target =
@@ -289,7 +289,7 @@ void BrewManager::handleIdleState() {
 
   if (machine.isManualStart()) {
     startBrew(baseTarget, true);
-  } else if (machine.isOneCupStart()) {
+  } else if (machine.isTwoCupStart()) {
 
     float halfTarget = baseTarget / 2.0f;
 
