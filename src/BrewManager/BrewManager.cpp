@@ -291,7 +291,7 @@ void BrewManager::handleIdleState() {
     startBrew(baseTarget, true);
   } else if (machine.isTwoCupStart()) {
 
-    float halfTarget = baseTarget / 2.0f;
+    float halfTarget = baseTarget; //float halfTarget = baseTarget / 2.0f;
 
     if (prefs.pMode == WEIGHT_TRIGGERED) {
       machine.startPreinfusionMacro();
