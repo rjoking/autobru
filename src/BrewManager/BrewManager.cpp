@@ -236,6 +236,10 @@ void BrewManager::updateFlowModel() {
 
     // REJECTION: 3 'standard deviations' is a conservative threshold (99.7% of normal data)
     if (std::fabs(res - medianRes) > (3.0f * scaledMAD)) {
+      char rejectLog[128];
+      snprintf(rejectLog, sizeof(rejectLog), "[CALIB] REJECTED Shot ID: %u | Deviation: %.2f > Limit: %.2f", history[i].id, std::fabs(res - medianRes), (3.0f * scaledMAD));
+      DEBUG_PRINTF("%s\n", rejectLog);
+      sendSyslog(rejectLog);
       continue; 
     }
 
