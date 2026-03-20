@@ -4,6 +4,20 @@
 #include <HTTPClient.h>
 #include <algorithm> // Required for std::sort
 #include <cmath>     // Required for fabs, sqrt
+#include <WiFiUdp.h>
+
+// Adjust the relative path if your credentials.h is stored elsewhere
+#include "credentials.h" 
+
+static void sendSyslog(const char* msg) {
+#ifdef SYSLOG_SERVER
+  WiFiUDP udp;
+  udp.beginPacket(SYSLOG_SERVER, 514);
+  // <134> is Syslog Priority: Facility 16 (local0) + Severity 6 (info) -> (16*8 + 6 = 134)
+  udp.printf("<134>AutoBru: %s", msg);
+  udp.endPacket();
+#endif
+}
 
 BrewManager *BrewManager::instance = nullptr;
 
@@ -163,6 +177,17 @@ void BrewManager::updateFlowModel() {
   Shot *history =
       (currentProfileIndex == 0) ? recentShotsProfile0 : recentShotsProfile1;
 
+  // Log 1: All available data from the most recent shot
+  Shot &recent = history[0];
+  if (recent.id != 0) {
+    char shotLog[128];
+    snprintf(shotLog, sizeof(shotLog), 
+             "[SHOT] ID: %u | Time: %ds | Target: %.2fg | Final: %.2fg | Flow: %.2fg/s | Stop: %.2fg", 
+             recent.id, getBrewTimeSeconds(), recent.targetWeight, recent.finalWeight, recent.lastFlowRate, recent.stopWeight);
+    DEBUG_PRINTF("%s\n", shotLog);
+    sendSyslog(shotLog);
+  }
+
   float residuals[MAX_HISTORY];
   int validCount = 0;
 
@@ -176,7 +201,13 @@ void BrewManager::updateFlowModel() {
     residuals[validCount++] = actualDrip - predictedDrip;
   }
 
-  if (validCount < 5) return; // Need a baseline to define "normal" or MAD won't be meaningful
+  if (validCount < 5) {
+    char diagLog[128];
+    snprintf(diagLog, sizeof(diagLog), "[CALIB] Insufficient history for calibration (%d/5 valid shots)", validCount);
+    DEBUG_PRINTF("%s\n", diagLog);
+    sendSyslog(diagLog);
+    return; // Need a baseline to define "normal" or MAD won't be meaningful
+  }
 
   // --- PASS 2: Calculate MAD ---
   std::sort(residuals, residuals + validCount);
@@ -216,8 +247,13 @@ void BrewManager::updateFlowModel() {
   }
 
   // Need at least a few points to compute a meaningful slope
-  if (n < 3)
+  if (n < 3) {
+    char diagLog[128];
+    snprintf(diagLog, sizeof(diagLog), "[CALIB] Insufficient clean shots after MAD rejection (%d/3 clean shots)", n);
+    DEBUG_PRINTF("%s\n", diagLog);
+    sendSyslog(diagLog);
     return;
+  }
 
   double denominator = (n * sumX2 - sumX * sumX);
   float calculatedLag = prefs.systemLag;
@@ -243,6 +279,14 @@ void BrewManager::updateFlowModel() {
   flowCompBias[currentProfileIndex] =
       (flowCompBias[currentProfileIndex] * (1.0f - alpha)) +
       (calculatedBias * alpha);
+
+  // Log 2: Diagnostic on the updated model
+  char diagLog[128];
+  snprintf(diagLog, sizeof(diagLog), 
+           "[CALIB] History: %d/%d shots | Lag: %.2f | Bias: %.2f | Scaled MAD: %.2fg", 
+           n, validCount, prefs.systemLag, flowCompBias[currentProfileIndex], scaledMAD);
+  DEBUG_PRINTF("%s\n", diagLog);
+  sendSyslog(diagLog);
 }
 
 int BrewManager::getBrewTimeSeconds() {
