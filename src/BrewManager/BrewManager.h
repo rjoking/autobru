@@ -38,6 +38,8 @@ struct BrewPrefs {
   String apiToken = "";
   bool autoSavePreset = false;
   bool earlyStop = false;
+  bool swapButtons = false;
+  bool halfForTwoCup = true;
 };
 
 struct Shot {
@@ -66,6 +68,7 @@ private:
   // state
   bool active = false;
   bool waitingForMacro = false;
+  float macroTargetWeight = 0.0f;
 
   uint32_t globalShotCounter = 0;
 

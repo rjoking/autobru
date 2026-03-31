@@ -39,6 +39,8 @@ void BrewManager::saveSettings() {
   preferences.putString("apiToken", prefs.apiToken);
   preferences.putBool("autoSave", prefs.autoSavePreset);
   preferences.putBool("earlyStop", prefs.earlyStop);
+  preferences.putBool("swapButtons", prefs.swapButtons);
+  preferences.putBool("halfForTwoCup", prefs.halfForTwoCup);
 
   preferences.end();
 }
@@ -82,6 +84,8 @@ void BrewManager::loadSettings() {
   prefs.apiToken = preferences.getString("apiToken", "");
   prefs.autoSavePreset = preferences.getBool("autoSave", false);
   prefs.earlyStop = preferences.getBool("earlyStop", false);
+  prefs.swapButtons = preferences.getBool("swapButtons", false);
+  prefs.halfForTwoCup = preferences.getBool("halfForTwoCup", true);
 
   preferences.end();
 }
@@ -328,7 +332,9 @@ void BrewManager::update() {
     sManager->disconnectScale();
   }
 
-  if (machine.isTwoCupStart()) {
+  bool wakeButtonPressed =
+      prefs.swapButtons ? machine.isOneCupStart() : machine.isTwoCupStart();
+  if (wakeButtonPressed) {
     wake();
     return;
   }
@@ -347,13 +353,7 @@ void BrewManager::handleIdleState() {
   if (waitingForMacro) {
     if (machine.isMacroComplete()) {
       waitingForMacro = false;
-      // macro only runs when weight triggered preinfusion is enabled and user
-      // triggers a brew using the one cup button which doesn't support
-      // arbitrary length preinfusion on hold so we can take the regular/decaf
-      // preset and half it to get the target
-      float target =
-          isDecafTime() ? prefs.decafPreset / 2 : prefs.regularPreset / 2;
-      startBrew(target, false);
+      startBrew(macroTargetWeight, false);
     }
     return;
   }
@@ -364,17 +364,24 @@ void BrewManager::handleIdleState() {
     baseTarget = prefs.decafPreset;
   }
 
+  bool brewButtonPressed =
+      prefs.swapButtons ? machine.isTwoCupStart() : machine.isOneCupStart();
+
   if (machine.isManualStart()) {
     startBrew(baseTarget, true);
-  } else if (machine.isOneCupStart()) {
+  } else if (brewButtonPressed) {
 
-    float halfTarget = baseTarget / 2.0f;
+    float brewTarget = baseTarget;
+    if (prefs.halfForTwoCup) {
+      brewTarget /= 2.0f;
+    }
 
     if (prefs.pMode == WEIGHT_TRIGGERED) {
+      macroTargetWeight = brewTarget;
       machine.startPreinfusionMacro();
       waitingForMacro = true;
     } else {
-      startBrew(halfTarget, false);
+      startBrew(brewTarget, false);
     }
   }
 }

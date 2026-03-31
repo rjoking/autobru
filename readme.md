@@ -45,9 +45,12 @@ You can configure two weight presets via the `/prefs` endpoint (or the Bru setti
 *   **Time-based Switching:** If you define your timezone and a "Decaf Start Hour" (e.g., 14:00), the system automatically switches to the Decaf target weight after that time and switches back at midnight.
 
 ### Button Mapping
-*   **Manual Button:** Starts a shot with the **full preset weight** as the target.
-*   **1-Cup Button:** Starts a shot with the **half preset weight** as the target (nice to have if brewing single shots with a spouted portafilter).
-*   **2-Cup Button:** Currently, this just wakes the ESP if it's sleeping. I use it to purge my machine mainly. It doesn't trigger a specific functionality by default, but since you have the source code, you can map this to whatever you want!
+The behavior of the 1-cup and 2-cup buttons is configurable via the API or the Bru web interface.
+*   **Manual Button:** Always starts a shot with the **full preset weight** as the target.
+*   **Volumetric Button (1-Cup or 2-Cup):** Starts a shot using the current preset.
+    *   By default, this is the **1-Cup** button. You can swap this with the 2-Cup button via the `swapButtons` setting.
+    *   By default, this uses **half the preset weight**. You can toggle this to use the full preset weight via the `halfForTwoCup` setting.
+*   **Wake Button (1-Cup or 2-Cup):** Wakes the ESP if it's sleeping. By default, this is the **2-Cup** button, but it will swap with the 1-Cup button if `swapButtons` is enabled.
 
 *Note:* If you use **Weight-Triggered Pre-infusion**, preferably use the Manual button. It allows the ESP to hold the pre-infusion for an arbitrary duration until the first drops hit the cup. Doing this on the volumetric (1-cup/2-cup) buttons requires some funky workarounds to stop and restart the shot logic. That logic is already implemented but I would consider it experimental/unstable.
 
