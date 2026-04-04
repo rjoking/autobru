@@ -1,6 +1,7 @@
 #include "WebApi.h"
 #include "credentials.h"
 #include "debug.h"
+#include <ArduinoJson.h>
 #include <Arduino.h>
 #include <ArduinoOTA.h>
 #include <WiFi.h>
@@ -221,7 +222,9 @@ void WebAPI::setupRoutes() {
             !request->hasParam("learningRate", true) ||
             !request->hasParam("systemLag", true) ||
             !request->hasParam("autoSavePreset", true) ||
-            !request->hasParam("earlyStop", true)) {
+            !request->hasParam("earlyStop", true) ||
+            !request->hasParam("swapButtons", true) ||
+            !request->hasParam("halfForTwoCup", true)) {
           handleError(request, 400, "Missing required parameters");
           return;
         }
@@ -247,6 +250,10 @@ void WebAPI::setupRoutes() {
             request->getParam("autoSavePreset", true)->value().equals("true");
         prefs.earlyStop =
             request->getParam("earlyStop", true)->value().equals("true");
+        prefs.swapButtons =
+            request->getParam("swapButtons", true)->value().equals("true");
+        prefs.halfForTwoCup =
+            request->getParam("halfForTwoCup", true)->value().equals("true");
 
         if (prefs.learningRate < 0.0f || prefs.learningRate > 1.0) {
           handleError(request, 400, "Learning Rate must be 0 - 1");
@@ -276,21 +283,22 @@ void WebAPI::setupRoutes() {
 
               BrewPrefs prefs = bManager->getPrefs();
 
-              String response = "{";
-              response +=
-                  "\"isEnabled\":" + String(prefs.isEnabled ? "true" : "false");
-              response += ",\"regularPreset\":" + String(prefs.regularPreset);
-              response += ",\"decafPreset\":" + String(prefs.decafPreset);
-              response += ",\"pMode\":" + String(prefs.pMode);
-              response += ",\"decafStartHour\":" + String(prefs.decafStartHour);
-              response += ",\"timezone\":\"" + prefs.timezone + "\"";
-              response += ",\"learningRate\":" + String(prefs.learningRate);
-              response += ",\"systemLag\":" + String(prefs.systemLag);
-              response +=
-                  ",\"autoSavePreset\":" + String(prefs.autoSavePreset ? "true" : "false");
-              response +=
-                  ",\"earlyStop\":" + String(prefs.earlyStop ? "true" : "false");
-              response += "}";
+              JsonDocument doc;
+              doc["isEnabled"] = prefs.isEnabled;
+              doc["regularPreset"] = prefs.regularPreset;
+              doc["decafPreset"] = prefs.decafPreset;
+              doc["pMode"] = prefs.pMode;
+              doc["decafStartHour"] = prefs.decafStartHour;
+              doc["timezone"] = prefs.timezone;
+              doc["learningRate"] = prefs.learningRate;
+              doc["systemLag"] = prefs.systemLag;
+              doc["autoSavePreset"] = prefs.autoSavePreset;
+              doc["earlyStop"] = prefs.earlyStop;
+              doc["swapButtons"] = prefs.swapButtons;
+              doc["halfForTwoCup"] = prefs.halfForTwoCup;
+
+              String response;
+              serializeJson(doc, response);
 
               AsyncWebServerResponse *resp =
                   request->beginResponse(200, "application/json", response);
