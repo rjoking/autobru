@@ -52,6 +52,9 @@ private:
   static constexpr uint8_t TWO_CUP_PIN = 2;
   static constexpr uint8_t ONE_CUP_PIN = 3;
   static constexpr uint8_t BREW_SWITCH_PIN = 4;
+  static constexpr uint8_t POWER_SWITCH_PIN = 5;
+  static constexpr uint8_t MAN_LED_PIN = 6;
+  static constexpr uint8_t PWR_LED_PIN = 7;
 #endif
 
   static constexpr ulong BUTTON_DEBOUNCE_TIME = 50;

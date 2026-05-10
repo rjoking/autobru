@@ -1,12 +1,17 @@
 #include "MachineController.h"
 
 void MachineController::begin() {
-  pinMode(MANUAL_PIN, INPUT_PULLUP);
+  pinMode(MANUAL_PIN, INPUT_PULLUP); //New hardware does not require external pullups, but keeping this for backwards compatibility
   pinMode(ONE_CUP_PIN, INPUT_PULLUP);
   pinMode(TWO_CUP_PIN, INPUT_PULLUP);
+  pinMode(MAN_LED_PIN, INPUT_PULLUP);
+  pinMode(PWR_LED_PIN, INPUT_PULLUP);
 
   pinMode(BREW_SWITCH_PIN, OUTPUT);
   digitalWrite(BREW_SWITCH_PIN, LOW);
+
+  pinMode(POWER_SWITCH_PIN, OUTPUT);
+  digitalWrite(POWER_SWITCH_PIN, LOW);
 
   manualBtn.pin = MANUAL_PIN;
   oneCupBtn.pin = ONE_CUP_PIN;
