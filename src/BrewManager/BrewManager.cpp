@@ -9,12 +9,12 @@
 // Adjust the relative path if your credentials.h is stored elsewhere
 #include "credentials.h" 
 
-static void sendSyslog(const char* msg) {
+static void sendSyslog(const char* msg, const char* appName = "AutoBru") {
 #ifdef SYSLOG_SERVER
   WiFiUDP udp;
   udp.beginPacket(SYSLOG_SERVER, 514);
   // <134> is Syslog Priority: Facility 16 (local0) + Severity 6 (info) -> (16*8 + 6 = 134)
-  udp.printf("<134>AutoBru: %s", msg);
+  udp.printf("<134>%s: %s", appName, msg);
   udp.endPacket();
 #endif
 }
@@ -368,6 +368,12 @@ void BrewManager::update() {
   // DEBUG_PRINTF("entering update, state = %d\n", state);
 
   machine.update();
+
+  // Check for and log any machine state transitions
+  const char* stateLog = machine.getNewStateLog();
+  if (stateLog) {
+    sendSyslog(stateLog, "AutoBru-State");
+  }
 
   if (pendingBeeps > 0 && millis() - lastBeepTime > 150) {
     sManager->beep();

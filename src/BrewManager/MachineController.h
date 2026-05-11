@@ -48,6 +48,7 @@ public:
   void stopFromPreinfusion();
 
   MachineState getCurrentState() const { return currentState; }
+  const char* getNewStateLog();
 
 private:
   void updateButton(DebouncedButton &btn);
@@ -108,6 +109,7 @@ private:
   bool isManFlashing = false;
   bool pwrSteadyState = true;
   bool manSteadyState = true;
+  char stateLogMessage[64] = {0};
 };
 
 #endif

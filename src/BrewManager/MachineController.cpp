@@ -175,12 +175,33 @@ void MachineController::updateState() {
   }
 
   if (newState != currentState) {
-    Serial.printf("[STATE] %s -> %s\n", getStateName(currentState), getStateName(newState));
-    // TODO: Add Syslog call for a separate log of state changes, e.g. syslog.logf(LOG_INFO, "[STATE] %s -> %s", getStateName(currentState), getStateName(newState))
-    // e.g. syslog.logf(LOG_INFO, "[STATE] %s -> %s", getStateName(currentState), getStateName(newState));
+    // Format the message once. It will be used for Serial and Syslog.
+    snprintf(stateLogMessage, sizeof(stateLogMessage), "[STATE] %s -> %s", getStateName(currentState), getStateName(newState));
+    
+    // Log to Serial immediately for local debugging.
+    Serial.println(stateLogMessage);
     
     currentState = newState;
   }
+}
+
+const char* MachineController::getNewStateLog() {
+  if (stateLogMessage[0] == '\0') {
+    return nullptr;
+  }
+  
+  // The message is available. The caller will use it.
+  // We need to return a pointer to the message, but also clear the buffer
+  // so it's not sent again. A static buffer is a safe way to do this.
+  static char tempBuffer[64];
+  strncpy(tempBuffer, stateLogMessage, sizeof(tempBuffer));
+  // Ensure null termination, as strncpy might not if src is too long.
+  tempBuffer[sizeof(tempBuffer) - 1] = '\0'; 
+  
+  // Clear the internal message buffer to signal it has been processed.
+  stateLogMessage[0] = '\0'; 
+  
+  return tempBuffer;
 }
 
 const char* MachineController::getStateName(MachineState state) {
