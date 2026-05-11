@@ -22,6 +22,8 @@ void MachineController::update() {
   updateButton(manualBtn);
   updateButton(oneCupBtn);
   updateButton(twoCupBtn);
+  
+  updateState();
 
   if (relayActive && !relayLatching && millis() >= relayReleaseTime) {
     digitalWrite(BREW_SWITCH_PIN, LOW);
@@ -113,5 +115,80 @@ void MachineController::updateButton(DebouncedButton &btn) {
       btn.fellEdge = true;
     else
       btn.roseEdge = true;
+  }
+}
+
+void MachineController::updateState() {
+  bool currentPwr = digitalRead(PWR_LED_PIN);
+  bool currentMan = digitalRead(MAN_LED_PIN);
+  uint32_t now = millis();
+
+  // Power LED Flashing/Steady detection
+  if (currentPwr != lastPwrRaw) {
+    lastPwrRaw = currentPwr;
+    if (now - lastPwrChange <= FLASH_THRESHOLD) {
+      pwrEdgeCount++;
+    } else {
+      pwrEdgeCount = 1;
+    }
+    lastPwrChange = now;
+
+    if (pwrEdgeCount > 1) {
+      isPwrFlashing = true;
+    }
+  } else if (now - lastPwrChange > FLASH_THRESHOLD) {
+    isPwrFlashing = false;
+    pwrSteadyState = currentPwr;
+    pwrEdgeCount = 0;
+  }
+
+  // Manual LED Flashing/Steady detection
+  if (currentMan != lastManRaw) {
+    lastManRaw = currentMan;
+    if (now - lastManChange <= FLASH_THRESHOLD) {
+      manEdgeCount++;
+    } else {
+      manEdgeCount = 1;
+    }
+    lastManChange = now;
+
+    if (manEdgeCount > 1) {
+      isManFlashing = true;
+    }
+  } else if (now - lastManChange > FLASH_THRESHOLD) {
+    isManFlashing = false;
+    manSteadyState = currentMan;
+    manEdgeCount = 0;
+  }
+
+  MachineState newState = currentState;
+
+  // State resolution (Logic: LOW = ON, HIGH = OFF)
+  if (!isPwrFlashing && pwrSteadyState == HIGH && !isManFlashing && manSteadyState == HIGH) {
+    newState = MACHINE_OFF;
+  } else if (isPwrFlashing && !isManFlashing && manSteadyState == HIGH) {
+    newState = MACHINE_WARM_UP;
+  } else if (!isPwrFlashing && pwrSteadyState == LOW && !isManFlashing && manSteadyState == LOW) {
+    newState = MACHINE_READY;
+  } else if (!isPwrFlashing && pwrSteadyState == LOW && isManFlashing) {
+    newState = MACHINE_BREWING;
+  }
+
+  if (newState != currentState) {
+    Serial.printf("[STATE] %s -> %s\n", getStateName(currentState), getStateName(newState));
+    // TODO: Add Syslog call for a separate log of state changes, e.g. syslog.logf(LOG_INFO, "[STATE] %s -> %s", getStateName(currentState), getStateName(newState))
+    // e.g. syslog.logf(LOG_INFO, "[STATE] %s -> %s", getStateName(currentState), getStateName(newState));
+    
+    currentState = newState;
+  }
+}
+
+const char* MachineController::getStateName(MachineState state) {
+  switch (state) {
+    case MACHINE_OFF: return "OFF";
+    case MACHINE_WARM_UP: return "WARM_UP";
+    case MACHINE_READY: return "READY";
+    case MACHINE_BREWING: return "BREWING";
+    default: return "UNKNOWN";
   }
 }
